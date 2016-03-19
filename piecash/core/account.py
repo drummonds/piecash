@@ -180,7 +180,7 @@ class Account(DeclarativeBaseGuid):
     def __init__(self,
                  name,
                  type,
-                 commodity,
+                 commodity=False, # looking for a sentinel value as None is a valid result
                  parent=None,
                  description=None,
                  commodity_scu=None,
@@ -189,9 +189,11 @@ class Account(DeclarativeBaseGuid):
                  code=None,
                  book=None,
                  children=None):
-        book = book or (commodity and commodity.book) or (parent and parent.book)
+        book = book or (parent and parent.book) or (commodity and commodity.book)
         if not book:
             raise ValueError("Could not find a book to attach the account to")
+        if commodity == False:
+            commodity = book.default_currency
         book.add(self)
 
         self.name = name

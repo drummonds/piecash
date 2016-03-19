@@ -142,6 +142,10 @@ class Book(DeclarativeBaseGuid):
             def_curr = self["default-currency"] = self.currencies(mnemonic=mnemonic)
             return def_curr
 
+    @default_currency.setter
+    def default_currency(self, mnemonic):
+        self["default-currency"] = self.currencies(mnemonic=mnemonic)
+
     @property
     def book(self):
         warnings.warn("deprecated", DeprecationWarning)
