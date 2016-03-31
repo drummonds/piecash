@@ -230,6 +230,53 @@ def book_transactions(request):
         drop_database(name)
 
 
+@pytest.yield_fixture(params=databases_to_check)
+def book_people(request):
+    """Creates a simple gnucash with a customer for testing creating invoices
+    """
+    name = request.param
+
+    if name and database_exists(name):
+        drop_database(name)
+    # create new book
+    with create_book(uri_conn=name, currency="EUR", keep_foreign_keys=False) as b:
+        # create some accounts
+        curr = b.default_currency
+        other_curr = b.currencies(mnemonic="USD")
+        cdty = Commodity(namespace=u"BEL20", mnemonic=u"GnuCash Inc.", fullname=u"GnuCash Inc. stock")
+        asset = Account(name="asset", type="ASSET", commodity=curr, parent=b.root_account)
+        foreign_asset = Account(name="foreign asset", type="ASSET", commodity=other_curr, parent=b.root_account)
+        stock = Account(name="broker", type="STOCK", commodity=cdty, parent=asset)
+        expense = Account(name="exp", type="EXPENSE", commodity=curr, parent=b.root_account)
+        income = Account(name="inc", type="INCOME", commodity=curr, parent=b.root_account)
+
+        tr1 = Transaction(post_date=datetime(2015, 10, 21),
+                          description="my revenue",
+                          currency=curr,
+                          splits=[
+                              Split(account=asset, value=(1000, 1)),
+                              Split(account=income, value=(-1000, 1)),
+                          ]
+                          )
+        tr_stock = Transaction(post_date=datetime(2015, 10, 29),
+                               description="my purchase of stock",
+                               currency=curr,
+                               splits=[
+                                   Split(account=asset, value=(-200, 1)),
+                                   Split(account=expense, value=(15, 1), memo="transaction costs"),
+                                   Split(account=stock, value=(185, 1), quantity=(6, 1), memo="purchase of stock"),
+                               ]
+                               )
+
+        cust = Customer(name="Acmé Engineering Ltd", currency=curr, book=b)
+
+        b.save()
+        yield b
+
+    if name and database_exists(name):
+        drop_database(name)
+
+
 def is_inmemory_sqlite(book_basic):
     # print book_basic.uri, book_basic.uri.get_dialect(), book_basic.uri.database, type(book_basic.uri), dir(book_basic.uri)
     # print "sqlite" in book_basic.uri and ":memory:" in book_basic.uri
